@@ -1,0 +1,1 @@
+sed -i 's/const { user, dbUser, isGuest, setGuest, login, register, logout, loading } = useAuth();/const { user, dbUser, isGuest, setGuest, login, register, resetPassword, logout, loading } = useAuth();/g' src/App.tsx
