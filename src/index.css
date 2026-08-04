@@ -1,1 +1,99 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Nền giấy hồ sơ, hơi lạnh */
+  --color-background: #f0f3f2;
+  --color-foreground: #15201e;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #15201e;
+
+  --color-muted: #e6ebe9;
+  --color-muted-foreground: #596864;
+
+  --color-border: #d7dfdc;
+  --color-input: #cdd7d4;
+  --color-ring: #0e5a4e;
+
+  /* Xanh mực công vụ */
+  --color-primary: #0e5a4e;
+  --color-primary-foreground: #f3f7f6;
+  --color-primary-muted: #e0edea;
+
+  /* Đồng thau, dùng cho nhấn mạnh và xếp hạng */
+  --color-accent: #a06a17;
+  --color-accent-foreground: #fdf8ef;
+  --color-accent-muted: #f6eddc;
+
+  --color-destructive: #a02f22;
+  --color-destructive-foreground: #fdf4f3;
+  --color-destructive-muted: #f9e8e6;
+
+  --radius-card: 0.625rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-foreground);
+    background-color: var(--color-background);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Số liệu trong bảng luôn thẳng cột */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: var(--color-primary-muted);
+  }
+}
+
+/* Đồng bộ hộp thoại SweetAlert2 với hệ thiết kế */
+.swal2-popup {
+  font-family: var(--font-sans) !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.swal2-title {
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  color: var(--color-foreground) !important;
+}
+
+.swal2-html-container {
+  font-size: 0.9375rem !important;
+  color: var(--color-muted-foreground) !important;
+}
+
+.swal2-styled.swal2-confirm,
+.swal2-styled.swal2-cancel {
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.swal2-styled.swal2-confirm {
+  background-color: var(--color-primary) !important;
+}
+
+.swal2-styled.swal2-cancel {
+  background-color: var(--color-muted) !important;
+  color: var(--color-foreground) !important;
+}
+
+.swal2-input {
+  border-radius: 0.5rem !important;
+  border-color: var(--color-input) !important;
+  font-family: var(--font-sans) !important;
+}

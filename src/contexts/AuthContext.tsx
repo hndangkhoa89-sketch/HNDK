@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../lib/firebase';
 
-interface DbUser {
+export interface DbUser {
   uid: string;
   email: string;
   name: string | null;
@@ -12,161 +10,94 @@ interface DbUser {
 }
 
 interface AuthContextType {
-  user: User | any | null;
   dbUser: DbUser | null;
   token: string | null;
   isGuest: boolean;
   setGuest: (val: boolean) => void;
-  login: (email?: string, password?: string) => Promise<void>;
-  register: (email?: string, password?: string) => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  logout: () => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => void;
   loading: boolean;
   refreshUser: () => Promise<void>;
 }
 
+const TOKEN_KEY = 'cd_auth_token';
+
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | any | null>(null);
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchDbUser = async (authToken: string) => {
-    try {
-      const res = await fetch('/api/me', {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDbUser(data);
-        return data;
-      } else {
-        throw new Error('Failed to fetch user');
-      }
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
+  const fetchDbUser = async (authToken: string): Promise<DbUser> => {
+    const res = await fetch('/api/me', {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (!res.ok) throw new Error('Không lấy được thông tin người dùng');
+    const data = (await res.json()) as DbUser;
+    setDbUser(data);
+    return data;
   };
 
+  // Khôi phục phiên đăng nhập đã lưu
   useEffect(() => {
-    const customToken = localStorage.getItem('custom_auth_token');
-    
-    if (customToken) {
-      setToken(customToken);
-      fetchDbUser(customToken).then((data) => {
-        setUser({ uid: data.uid, email: data.email, displayName: data.name });
-        setLoading(false);
-      }).catch(() => {
-        localStorage.removeItem('custom_auth_token');
-        setToken(null);
-        setUser(null);
-        setLoading(false);
-      });
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (!saved) {
+      setLoading(false);
       return;
     }
-
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (localStorage.getItem('custom_auth_token')) return; // ignore firebase if custom token exists
-      setUser(u);
-      if (u) {
-        const t = await u.getIdToken();
-        setToken(t);
-        await fetchDbUser(t);
-      } else {
+    setToken(saved);
+    fetchDbUser(saved)
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
         setToken(null);
         setDbUser(null);
-      }
-      setLoading(false);
-    });
-
-    return unsubscribe;
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email?: string, password?: string) => {
-    try {
-      if (email && email.endsWith('@system.local')) {
-        const username = email.replace('@system.local', '');
-        const actualPassword = password?.replace('_system', '');
-        
-        // Custom backend login
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password: actualPassword })
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'Sai tài khoản hoặc mật khẩu');
-        }
-        const data = await res.json();
-        localStorage.setItem('custom_auth_token', data.token);
-        setToken(data.token);
-        const udata = await fetchDbUser(data.token);
-        setUser({ uid: udata.uid, email: udata.email, displayName: udata.name });
-        setIsGuest(false);
-        return;
-      }
-      
-      if (email && password) {
-        await signInWithEmailAndPassword(auth, email, password);
-        setIsGuest(false);
-      } else {
-        throw new Error('Email and password required');
-      }
-    } catch (err) {
-      console.error(err);
-      throw err;
+  const login = async (username: string, password: string) => {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Sai tài khoản hoặc mật khẩu');
     }
+    const data = await res.json();
+    localStorage.setItem(TOKEN_KEY, data.token);
+    setToken(data.token);
+    await fetchDbUser(data.token);
+    setIsGuest(false);
   };
 
-  const register = async (email?: string, password?: string) => {
-    try {
-      if (email && password) {
-        await createUserWithEmailAndPassword(auth, email, password);
-        setIsGuest(false);
-      } else {
-        throw new Error('Email and password required');
-      }
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
-  };
-
-  const resetPassword = async (email: string) => {
-    try {
-      if (email) {
-        await sendPasswordResetEmail(auth, email);
-      } else {
-        throw new Error('Email required');
-      }
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
-  };
-
-  const logout = async () => {
-    localStorage.removeItem('custom_auth_token');
-    await signOut(auth);
+  const logout = () => {
+    localStorage.removeItem(TOKEN_KEY);
     setToken(null);
-    setUser(null);
     setDbUser(null);
     setIsGuest(false);
   };
 
   const refreshUser = async () => {
-    if (token) {
-      await fetchDbUser(token);
-    }
+    if (token) await fetchDbUser(token);
   };
 
   return (
-    <AuthContext.Provider value={{ user, dbUser, token, isGuest, setGuest: setIsGuest, login, register, resetPassword, logout, loading, refreshUser }}>
+    <AuthContext.Provider
+      value={{
+        dbUser,
+        token,
+        isGuest,
+        setGuest: setIsGuest,
+        login,
+        logout,
+        loading,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
