@@ -15,8 +15,10 @@ export default defineConfig(() => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // The backend runs as a separate tsx process. Vite must not watch or
+      // reload the backend entrypoint, otherwise a second process can start
+      // and claim port 3000, leaving API requests unavailable.
+      watch: null,
     },
   };
 });
