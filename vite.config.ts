@@ -16,7 +16,11 @@ export default defineConfig(() => {
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // The backend is already running through tsx; watching it here causes a
+      // second server process to start and collide on port 3000.
+      watch: process.env.DISABLE_HMR === 'true'
+        ? null
+        : { ignored: ['**/server.ts', '**/patch_server*.js'] },
     },
   };
 });
