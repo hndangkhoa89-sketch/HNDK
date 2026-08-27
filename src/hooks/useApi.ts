@@ -21,11 +21,21 @@ export function useApi() {
       headers,
     });
     
+    const contentType = res.headers.get('content-type') ?? '';
+    const payload = contentType.includes('application/json')
+      ? await res.json().catch(() => ({}))
+      : await res.text().catch(() => '');
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'API Error');
+      const message = typeof payload === 'object' && payload !== null && 'error' in payload
+        ? String(payload.error)
+        : typeof payload === 'string' && payload.trim()
+          ? payload.slice(0, 200)
+          : `API request failed (${res.status})`;
+      throw new Error(message);
     }
-    return res.json();
+
+    return payload;
   }, [token, isGuest]);
 
   return { request };
